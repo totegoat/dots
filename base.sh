@@ -13,19 +13,19 @@
 
 set -e
 
-# Toter configuration directory
+# Local configuration directory
 config_dir=~/.config/toter
 
 # In-path bin directory
 bin_dir=~/.local/bin
 
-# Toter data directory
-data_dir=~/.local/share/toter
+# Local application directory
+app_dir=~/.local/share/toter
 
-# Local copy of the Toter git repo
-local_data=$data_dir/repo
+# Local copy of the toter repo
+local_copy=$app_dir/repo
 
-# Toter git repository
+# Remote toter git repository 
 git_remote=https://github.com/totegoat/toter
 
 # Symmetric encryption passphrase -- used to encrypt/decrypt secrets
@@ -86,8 +86,15 @@ install_packages() {
         pkgmgr_install="$sudo apt install -y "
 
     elif [ "$distro" == "rhel" ]; then
-        pkgmgr_update="$sudo dnf update -y"
-        pkgmgr_install="$sudo dnf install -y "
+        # minimal containers use dnf5/microdnf
+        if [ -f /usr/bin/dnf5 ]; then 
+            dnf_tool=dnf5
+            pkgmgr_update=""
+        else 
+            dnf_tool=dnf
+            pkgmgr_update="$sudo $dnf_tool update -y"
+        fi
+        pkgmgr_install="$sudo $dnf_tool install -y "
 
     elif [ "$distro" == "amazon" ]; then
         pkgmgr_update="$sudo yum update -y"
@@ -116,13 +123,13 @@ install_packages() {
     # done
     $pkgmgr_install $base_packages
     
-    # If GitHub CLI is enabled, setup the package repos for it.
+    # If GitHub CLI has been flagged, setup the GH repos.
     #
     # Linux installation docs:
     #     https://github.com/cli/cli/blob/trunk/docs/install_linux.md
     #
-    # MacOS installation docs:
-    # https://github.com/cli/cli#installation
+    # macOS installation docs:
+    #     https://github.com/cli/cli#installation
     #
     if [ "$git_tool" = "gh repo" ] && [ "$distro" = "debian" ]; then
         curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | $sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
@@ -145,6 +152,7 @@ install_packages() {
 
     elif [ "$git_tool" = "gh repo" ] && [ "$distro" = "slackware" ]; then
         # place holder
+        echo
 
     elif [ "$git_tool" = "gh repo" ] && [ "$distro" = "macos" ]; then
         $pkgmgr_install gh
@@ -174,30 +182,29 @@ passphrase_file() {
 # Clone Toter git repository or copy from local source
 #
 clone_repo() {
-    if [ ! -d $local_data ]; then
+    if [ ! -d $local_copy ]; then
         echo
         echo "Cloning Toter repo..."
-        mkdir -p $data_dir
-        $git_tool clone $git_remote $local_data
+        mkdir -p $app_dir
+        $git_tool clone $git_remote $local_copy
 
     else
         echo
-        echo "$local_data already exists. Skipping Toter clone..."
+        echo "$local_copy already exists. Skipping Toter clone..."
     fi
 }
 
 #
-# Setup Toter "executable" in path
+# Setup a Toter "executable" in path
 #
 setup_toter() {
     if [ ! -e $bin_dir/toter ]; then
         mkdir -p $bin_dir
-        ln -s $local_data/toter.sh $bin_dir/toter
+        ln -s $local_copy/toter.sh $bin_dir/toter
     fi
 
-    # check if $bin_dir is in path, if not, add it
-
-    # output done and some instructions for running toter
+    echo
+    echo "${bold}Done. ${norm} Run toter without any options for instructions."
 }
 
 #
@@ -217,7 +224,7 @@ print_usage() {
     #echo "         RHEL   (also CentOS, Fedora, Rocky)"
     #echo "         Amazon (ie. Amazon Linux 2) "
     #echo "         Slackware"
-    #echo "         MacOS"
+    #echo "         macOS"
     echo
 }
 

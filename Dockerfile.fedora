@@ -1,0 +1,19 @@
+FROM registry.fedoraproject.org/fedora-minimal
+
+# passed in from build command
+# ARG DEVENV_PASS
+
+WORKDIR /root
+
+COPY . /root
+
+# bootstrap
+# RUN cd dev/devenv && ./bootstrap.sh no-sudo 
+
+# RUN dnf update -y
+
+# passphrase file
+# RUN echo "${DEVENV_PASS}" >> .devenv_pass
+
+# sync dotfiles and config
+# RUN cd dev/devenv && ./devenv.sh sync no-sudo 

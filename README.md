@@ -3,6 +3,9 @@ Simple, secure dotfiles management for Linux and Mac.
 
 git, bash, gpg
 
+- stuff here
+- use Toter to quickly personalize a dev container
+- 
 
 When storing encrypted secrets in your dotfiles git repo, we recommend using keeping them in a private repo.
 
