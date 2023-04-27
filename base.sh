@@ -201,6 +201,11 @@ setup_toter() {
     if [ ! -e $bin_dir/toter ]; then
         mkdir -p $bin_dir
         ln -s $local_copy/toter.sh $bin_dir/toter
+
+    else
+        echo
+        echo `ls -l $bin_dir/toter | rev | cut -d' ' -f1-3 | rev`
+        echo "^^^ link already exists. Continuing..."
     fi
 
     echo
