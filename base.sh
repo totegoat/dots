@@ -220,9 +220,9 @@ print_usage() {
     echo "Usage: base.sh [command]"
     echo
     echo "Commands:"
-    echo "         bootstrap (configures fresh system to run toter)"
-    echo "              Options: --gh (use GitHub CLI to clone toter repo)"
-    echo "                       --nosudo (disable sudo, eg. running as root)"
+    echo "         bootstrap  Configures a fresh system to run toter."
+#    echo "              --gh     (use GitHub CLI to clone toter repo)"
+    echo "              --nosudo (disable sudo, eg. running as root)"
     echo 
     echo "Supported Distros (ie. package managers):"
     echo "         Debian (also Ubuntu)"
@@ -235,13 +235,15 @@ print_usage() {
 
 #
 # Main: Check arguments & run
+#       $1 Command
+#       $2 Option
 #
 if [ -n "$1" ]; then
     if [ "$1" = "bootstrap" ]; then
-        if [ ! -z "$2" ] && [ "$2" = "--gh" ]; then
+            #SET GIT_TOOL HERE ONLY FOR DEV SINCE IT'S A PRIVATE REPO
             git_tool="gh repo"
 
-        elif [ ! -z "$2" ] && [ "$2" = "--nosudo" ]; then
+        if [ -n "$2" ] && [ "$2" = "--nosudo" ]; then
             sudo=""
 
         else
