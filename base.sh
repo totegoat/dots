@@ -169,11 +169,10 @@ passphrase_file() {
         echo "Setting up passphrase file..."
         mkdir -p $config_dir
         touch $pass_file
-        echo "${bold}Be sure to put your symmetric passphrase in $pass_file.${norm}"
 
     else
         echo
-        echo "Passphrase file alread exists at $pass_file. Continuing..."
+        echo "Passphrase file already exists at $pass_file. Continuing..."
     fi
     chmod 600 $pass_file
 }
@@ -210,6 +209,7 @@ setup_toter() {
 
     echo
     echo "${bold}Done. ${norm} Run toter without any options for instructions."
+    echo "${bold}Be sure to put your symmetric passphrase in $pass_file.${norm}"
 }
 
 #
@@ -224,7 +224,7 @@ print_usage() {
     echo "              Options: --gh (use GitHub CLI to clone toter repo)"
     echo "                       --nosudo (disable sudo, eg. running as root)"
     echo 
-    echo "Supported Distros (Package Managers):"
+    echo "Supported Distros (ie. package managers):"
     echo "         Debian (also Ubuntu)"
     #echo "         RHEL   (also CentOS, Fedora, Rocky)"
     #echo "         Amazon (ie. Amazon Linux 2) "
