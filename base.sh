@@ -198,17 +198,23 @@ clone_repo() {
 #
 setup_toter() {
     if [ ! -e $bin_dir/toter ]; then
+        echo "Setting up toter executable..."
         mkdir -p $bin_dir
         ln -s $local_copy/toter.sh $bin_dir/toter
 
     else
         echo
         echo `ls -l $bin_dir/toter | rev | cut -d' ' -f1-3 | rev`
-        echo "^^^ link already exists. Continuing..."
+        echo "^^^ already exists. Continuing..."
+    fi
+
+    # Make sure bin_dir is in PATH
+    if [[ ! ":$PATH:" == *":$bin_dir:"* ]]; then
+        export PATH="$bin_dir:$PATH"
     fi
 
     echo
-    echo "${bold}Done. ${norm} Run toter without any options for instructions."
+    echo "${bold}Done. ${norm} Run toter without any args for instructions."
     echo "${bold}Be sure to put your symmetric passphrase in $pass_file.${norm}"
 }
 
@@ -217,12 +223,14 @@ setup_toter() {
 #
 print_usage() {
     echo
-    echo "Usage: base.sh [command]"
+    echo "Usage: base.sh COMMAND [OPTION]"
     echo
     echo "Commands:"
     echo "         bootstrap  Configures a fresh system to run toter."
 #    echo "              --gh     (use GitHub CLI to clone toter repo)"
-    echo "              --nosudo (disable sudo, eg. running as root)"
+    echo "                    --nosudo  (disable sudo, eg. running as root)"
+    echo
+    echo "         source     Allows base.sh to bypass exec, ie. sourced only."
     echo 
     echo "Supported Distros (ie. package managers):"
     echo "         Debian (also Ubuntu)"
@@ -238,11 +246,12 @@ print_usage() {
 #       $1 Command
 #       $2 Option
 #
-if [ -n "$1" ]; then
-    if [ "$1" = "bootstrap" ]; then
-            #SET GIT_TOOL HERE ONLY FOR DEV SINCE IT'S A PRIVATE REPO
-            git_tool="gh repo"
+if [ -z "$1" ]; then
+    print_usage
+    exit 0
 
+elif [ "$1" != "source" ]; then
+    if [ "$1" = "bootstrap" ]; then
         if [ -n "$2" ] && [ "$2" = "--nosudo" ]; then
             sudo=""
 
@@ -262,7 +271,4 @@ if [ -n "$1" ]; then
         print_usage
         exit 1
     fi
-
-else
-    print_usage
 fi
