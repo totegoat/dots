@@ -23,7 +23,7 @@ set -e
 config_dir=$HOME/.config/toter
 
 # In-path bin directory
-bin_dir=$HOME/.local/bin
+bin_dir=$HOME/.local/bin  
 
 # Local application directory
 app_dir=$HOME/.local/share/toter
@@ -42,6 +42,7 @@ base_packages="git gpg curl"
 
 # Git default binary
 git_tool=git
+git_flag=false
 
 # Do not run privileged commands with sudo by default
 sudo=""
@@ -79,6 +80,47 @@ discover_distro() {
     echo
     echo "Distro identified as ${bold}$distro${norm}."
     echo
+}
+
+#
+# Install GitHub CLI w/ distro package managers
+#
+# If GitHub CLI has been flagged, setup the GH repos.
+#
+# Linux installation docs:
+#     https://github.com/cli/cli/blob/trunk/docs/install_linux.md
+#
+# macOS installation docs:
+#     https://github.com/cli/cli#installation
+#
+install_ghcli() {
+    if [ "$distro" = "debian" ]; then
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | $sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+        && $sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | $sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null 
+        $pkgmgr_update
+        $pkgmgr_install gh
+
+    elif [ "$distro" = "rhel" ]; then
+        # $pkgmgr_install 'dnf-command(config-manager)'
+        # $sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo 
+        #
+        # Install from the community repository instead
+        $pkgmgr_install gh
+
+    elif [ "$distro" = "amazon" ]; then
+        $pkgmgr_install yum-utils
+        $sudo yum-config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+        $pkgmgr_install gh
+
+    elif [ "$distro" = "slackware" ]; then
+        # place holder
+        echo slackware GH install here
+
+    elif [ "$distro" = "macos" ]; then
+        $pkgmgr_install gh
+
+    fi
 }
 
 #
@@ -130,41 +172,10 @@ install_base_packages() {
     #    $pkgmgr_install $pkg
     # done
     $pkgmgr_install $base_packages
-    
-    # If GitHub CLI has been flagged, setup the GH repos.
-    #
-    # Linux installation docs:
-    #     https://github.com/cli/cli/blob/trunk/docs/install_linux.md
-    #
-    # macOS installation docs:
-    #     https://github.com/cli/cli#installation
-    #
-    if [ "$git_tool" = "gh repo" ] && [ "$distro" = "debian" ]; then
-        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | $sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-        && $sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | $sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null 
-        $pkgmgr_update
-        $pkgmgr_install gh
 
-    elif [ "$git_tool" = "gh repo" ] && [ "$distro" = "rhel" ]; then
-        # $pkgmgr_install 'dnf-command(config-manager)'
-        # $sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo 
-        #
-        # Install from the community repository instead
-        $pkgmgr_install gh
-
-    elif [ "$git_tool" = "gh repo" ] && [ "$distro" = "amazon" ]; then
-        $pkgmgr_install yum-utils
-        $sudo yum-config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
-        $pkgmgr_install gh
-
-    elif [ "$git_tool" = "gh repo" ] && [ "$distro" = "slackware" ]; then
-        # place holder
-        echo
-
-    elif [ "$git_tool" = "gh repo" ] && [ "$distro" = "macos" ]; then
-        $pkgmgr_install gh
-
+    # If GitHub CLI has been flagged, install it
+    if $git_flag; then
+        install_ghcli
     fi
 }
 
@@ -206,8 +217,9 @@ clone_toter_repo() {
 #
 setup_toter_exec() {
     if [ ! -L $bin_dir/toter ]; then
+        echo
         echo "Setting up toter executable..."
-        mkdir -p $bin_dir
+        mkdir -p $bin_dir 
         ln -s $local_copy/toter.sh $bin_dir/toter &> /dev/null
 
     else
@@ -218,9 +230,12 @@ setup_toter_exec() {
 
     # Make sure bin_dir/toter symlink is in PATH
     if ! which toter &>/dev/null; then
-        echo "Adding $bin_dir to PATH..."
-        export PATH=$bin_dir:$PATH
+        echo "    Be sure to add $bin_dir to your PATH. Run the below before"
+        echo "    proceeding and add it to your .bashrc:"
+        echo
+        echo "    ${bold}export PATH=$bin_dir:\$PATH${norm}"
     else
+        echo
         echo "$bin_dir already in PATH."
     fi
 }
@@ -230,13 +245,14 @@ setup_toter_exec() {
 #
 print_usage() {
     echo
-    echo "Usage: base.sh COMMAND [OPTION]"
+    echo "Usage: toter.sh COMMAND [OPTIONS]"
     echo
     echo "Commands:"
-    echo "         bootstrap  Configures a fresh system to run toter."
-    echo "                    --sudo  (enable sudo, eg. running as non-root)"
+    echo "         bootstrap  Configures a fresh system to manage dotfiles with toter."
+    echo "                    --sudo (enable sudo, eg. running as non-root)"
+    echo "                    --gh   (installs GitHub CLI for dotfiles in a private repo)"
     echo
-    echo "         source     Allows base.sh to bypass exec, ie. sourced only."
+    echo "         source     Allows toter.sh to bypass exec, ie. import/source only."
     echo 
     echo "Supported Distros (ie. package managers):"
     echo "         Debian (also Ubuntu)"
@@ -251,20 +267,36 @@ print_usage() {
 # Main: Check arguments & run
 #       $1 Command
 #       $2 Option
+#       $3 Option
 #
 if [ -z "$1" ]; then
     print_usage
     exit 0
 
-elif [ "$1" != "source" ]; then
+elif [ "$1" != "source" ]; then  # if source is set skip all exec below
     if [ "$1" = "bootstrap" ]; then
-        if [ -n "$2" ] && [ "$2" = "--sudo" ]; then
+        if [ -n "$2" ]; then
+            if [ "$2" = "--sudo" ]; then
                 sudo="sudo"
-
-        elif [ -n "$2" ] && [ "$2" != "--sudo" ]; then
-            echo "Error: $2 is not a valid option."    
-            print_usage
-            exit 1
+            elif [ "$2" = "--gh" ]; then
+                git_flag=true
+            else
+                echo "Error: $2 is not a valid option."    
+                print_usage
+                exit 1
+            fi
+        fi
+            
+        if [ -n "$3" ]; then
+            if [ "$3" = "--sudo" ]; then
+                sudo="sudo"
+            elif [ "$3" = "--gh" ]; then
+                git_flag=true
+            else
+                echo "Error: $3 is not a valid option."    
+                print_usage
+                exit 1
+            fi
         fi
 
         install_base_packages
@@ -273,8 +305,14 @@ elif [ "$1" != "source" ]; then
         setup_toter_exec
 
         echo
-        echo "${bold}Done. ${norm} Run toter without any args for instructions."
+        echo "${bold}Done. ${norm} After add $bin_dir to your path, run \"toter\" without any args for instructions."
         echo "${bold}Be sure to put your encryption passphrase in $pass_file.${norm}"
+        if $git_flag; then
+            echo
+            echo "GitHub CLI was installed..." 
+            echo "To get started with GitHub CLI, please run:  gh auth login"
+            echo "Alternatively, populate the GH_TOKEN environment variable with a GitHub API authentication token."
+        fi
 
     else
         echo "Error: $1 is not a valid command."

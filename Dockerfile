@@ -10,7 +10,7 @@ COPY . /root
 
 # Toter: bootstrap
 ENV TERM=xterm-256color
-RUN ./base.sh bootstrap
+RUN ./toter.sh bootstrap
 
 # Update passphase file with PASSPHRASE ARG
 RUN echo "${TOTER_PASS}" >> /root/.config/toter/passfile

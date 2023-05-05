@@ -3,7 +3,7 @@
 script_dir=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
 
 # Import base.sh for the base packages list
-. $script_dir/../base.sh source
+. $script_dir/../toter.sh source
 
 failed=0
 succeeded=0
