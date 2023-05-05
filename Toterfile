@@ -1,6 +1,14 @@
-# Toterfile
-
-# The order that the configuration in this file is processed:
+#-----------------------------------------------------------------------------#
+# Toterfile 
+#
+# This file is imported by toter.sh (github.com/totegoat/toter) as a 
+# configuration file of sorts, though it is technically BASH script.
+#
+# Place this file in the root of your dotfiles Git repository for the Toter
+# tool to be able to know how to handle your dotfiles.
+#
+# Toter has essentially two overarching management actions: pull and push. 
+# This is order that this configuration file is processed by toter.sh:
 #
 #    PULL                              PUSH
 #    ------------------------          ---------------------
@@ -9,10 +17,53 @@
 #    2. Dotfiles (link)                Secrets (encrypt)
 #    3. Secrets (decrypt)              Dotfiles (push)
 #    4. Archives (unzip)               Directories (ignored)
+#
+#-----------------------------------------------------------------------------#
 
-# Required DIRECTORIES that must exist before dotfiles, secrets, and
+# DIRECTORIES 
+#
+# These are required directories that must exist before dotfiles, secrets, and
 # archives are placed into them.
 #
+# Directories will NOT be tracked by Git. 
+#
+# For example, if your .vimrc is configured to use .vim/tmp for your backup 
+# files, you just want it created to support your .vimrc, but not tracking
+# all those files in Git.
+#
+# If you want a directory and its contents to be tracked, put them in DOTFILES. 
+#
+# Format: "directory permissions"
+#
 dotdirs=(
-    
+    # Toter will create both .vim and tmp, but if you want a different perm
+    # set for the .vim parent dir, then specify it before (".vim 740"), as 
+    # elements of this array are processed in order.
+    ".vim/tmp 755"
+
+    # don't want this tracked, but need it for SSH config
+    ".ssh 700"       
+
+    # encrypted archive of server keys will unzip here
+    ".ssh/keys 700"  
 )
+
+# DOTFILES
+#
+dotfiles=(
+)
+
+# SECRETS
+#
+secrets=(
+)
+
+# ARCHIVES
+#
+archives=(
+)
+
+# PACKAGES
+#
+# packages=(
+# )

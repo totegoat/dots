@@ -54,6 +54,33 @@ bold=$'\033[1m'
 norm=$'\033[0m'
 
 #
+# Print usage instructions
+#
+print_usage() {
+    echo
+    echo "Usage: toter.sh COMMAND [OPTIONS]"
+    echo
+    echo "Commands:"
+    echo "         bootstrap [--sudo | --gh]"
+    echo "                 - Configures a fresh system for toter dotfiles management."
+    echo
+    echo "         source"
+    echo "                 - Allows toter.sh to bypass exec, ie. import/sourcing."
+    echo
+    echo "Options:"
+    echo "         --sudo (enable sudo, eg. running as non-root)"
+    echo "         --gh   (installs GitHub CLI for dotfiles in a GH private repo)"
+    echo 
+    echo "Supported Distros (ie. package managers):"
+    echo "         Debian (also Ubuntu)"
+    echo "         RHEL   (also CentOS, Fedora, Rocky)"
+    echo "         Amazon (Amazon Linux 2) "
+    #echo "         Slackware"
+    #echo "         macOS"
+    echo
+}
+
+#
 # Distro Discovery
 #
 discover_distro() {
@@ -85,15 +112,15 @@ discover_distro() {
 #
 # Install GitHub CLI w/ distro package managers
 #
-# If GitHub CLI has been flagged, setup the GH repos.
-#
-# Linux installation docs:
-#     https://github.com/cli/cli/blob/trunk/docs/install_linux.md
-#
-# macOS installation docs:
-#     https://github.com/cli/cli#installation
-#
 install_ghcli() {
+    # If GitHub CLI has been flagged, setup the GH repos.
+    #
+    # Linux installation docs:
+    #     https://github.com/cli/cli/blob/trunk/docs/install_linux.md
+    #
+    # macOS installation docs:
+    #     https://github.com/cli/cli#installation
+    #
     if [ "$distro" = "debian" ]; then
         curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | $sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
         && $sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
@@ -241,29 +268,6 @@ setup_toter_exec() {
 }
 
 #
-# Print usage instructions
-#
-print_usage() {
-    echo
-    echo "Usage: toter.sh COMMAND [OPTIONS]"
-    echo
-    echo "Commands:"
-    echo "         bootstrap  Configures a fresh system to manage dotfiles with toter."
-    echo "                    --sudo (enable sudo, eg. running as non-root)"
-    echo "                    --gh   (installs GitHub CLI for dotfiles in a private repo)"
-    echo
-    echo "         source     Allows toter.sh to bypass exec, ie. import/source only."
-    echo 
-    echo "Supported Distros (ie. package managers):"
-    echo "         Debian (also Ubuntu)"
-    echo "         RHEL   (also CentOS, Fedora, Rocky)"
-    echo "         Amazon (ie. Amazon Linux 2) "
-    #echo "         Slackware"
-    #echo "         macOS"
-    echo
-}
-
-#
 # Main: Check arguments & run
 #       $1 Command
 #       $2 Option
@@ -304,6 +308,7 @@ elif [ "$1" != "source" ]; then  # if source is set skip all exec below
         passphrase_file
         setup_toter_exec
 
+        # Output details of completion
         echo
         echo "${bold}Done. ${norm} After add $bin_dir to your path, run \"toter\" without any args for instructions."
         echo "${bold}Be sure to put your encryption passphrase in $pass_file.${norm}"
