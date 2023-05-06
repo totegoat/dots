@@ -29,7 +29,13 @@ bin_dir=$HOME/.local/bin
 app_dir=$HOME/.local/share/dots
 
 # Local copy of the dots repo
-local_copy=$app_dir/repo
+local_copy=$app_dir/dots-repo
+
+# Local copy of dotfiles repo
+dotfiles=$app_dir/dotfiles
+
+# Dotsfile in dotfiles repo
+dotsfile=$dotfiles/Dotsfile
 
 # Remote dots git repository 
 git_remote=https://github.com/totegoat/dots
@@ -64,12 +70,25 @@ print_usage() {
     echo "         bootstrap [--sudo | --gh]"
     echo "                 - Configures a fresh system for Dots (dotfiles management)."
     echo
+    echo "         setup <URL to remote repo> [--gh]"
+    echo "                 - Set-up your dotfiles Git repo (must contain Dotsfile)."
+    echo
+    echo "         apply"
+    echo "                 - Reads the Dotsfile in your dotfiles repo and applies the"
+    echo "                   configuration locally."
+    echo
+    echo "         stage"
+    echo "                 - Stages your archives and secrets for git push to remote."
+    echo
+    echo "         repo"
+    echo "                 - Puts you in your dotfiles dir for Git pull/push commands."
+    echo
     echo "         source"
     echo "                 - Allows dots script to bypass exec, ie. import as library."
     echo
     echo "Options:"
     echo "         --sudo (enable sudo, eg. running as non-root)"
-    echo "         --gh   (installs GitHub CLI for dotfiles in a GH private repo)"
+    echo "         --gh   (GitHub CLI for dotfiles in a GH private repo)"
     echo 
     echo "Supported Distros (ie. package managers):"
     echo "         Debian (also Ubuntu)"
@@ -267,6 +286,80 @@ setup_dots_exec() {
     fi
 }
 
+#---------------------#
+#      COMMANDS       #
+#---------------------#
+#
+# Configures a fresh end system for Dots exec
+#
+bootstrap() {
+
+    install_base_packages
+    clone_dots_repo        
+    passphrase_file
+    setup_dots_exec
+
+    echo
+    echo "${bold}Done. ${norm} After add $bin_dir to your path, run \"dots\" without any args for instructions."
+    echo "${bold}Be sure to put your encryption passphrase in $pass_file.${norm}"
+
+    if $git_flag; then
+        echo
+        echo "GitHub CLI was installed..." 
+        echo "To get started with GitHub CLI, please run:  gh auth login"
+        echo "Alternatively, populate the GH_TOKEN environment variable with a GitHub API authentication token."
+    fi
+}
+
+#
+# Setup dotfiles Git repo
+#
+setup() {
+    if [ ! -d $dotfiles ]; then
+        echo
+        echo "Cloning your dotfiles repo..."
+        $git_tool clone $2 $dotfiles
+
+        if [ ! -f $dotsfile ]; then
+            echo
+            echo "${bold}Warning: ${norm}No $dotsfile found in $dotfiles"
+        fi
+    else
+        echo
+        echo "$dotfiles already exists. Skipping clone..."
+    fi
+    # echo "$git_tool clone $2 $dotfiles"
+}
+
+#
+# Apply Dotsfile configuration
+#
+apply() {
+}
+
+#
+# Stage files in preparation for dotfiles repo push
+#
+stage() {
+}
+
+#
+# Quickly cd into the dotfiles repo/directory
+#
+repo() {
+    if [ ! -d $dotsfiles ]; then
+        echo "Error: $dotsfiles doesn't exist -- must 'setup' dotfiles repo first."
+        exit 1
+    else
+        cd $dotsfiles
+        echo
+        echo "Use any git commands in here to pull most recent configuration or push"
+        echo "staged files to remote dotfiles repo."
+        echo
+        echo "${bold}cd -${norm} will take you back."
+    fi
+}
+
 #
 # Main: Check arguments & run
 #       $1 Command
@@ -304,22 +397,42 @@ elif [ "$1" != "source" ]; then  # if source is set skip all exec below
                 exit 1
             fi
         fi
+        
+        bootstrap
 
-        install_base_packages
-        clone_dots_repo        
-        passphrase_file
-        setup_dots_exec
+    # COMMAND
+    elif [ "$1" = "setup" ]; then
+        if [ -n "$2" ] && [ -z "$3" ]; then
+            setup
 
-        # Output details of completion
-        echo
-        echo "${bold}Done. ${norm} After add $bin_dir to your path, run \"dots\" without any args for instructions."
-        echo "${bold}Be sure to put your encryption passphrase in $pass_file.${norm}"
-        if $git_flag; then
-            echo
-            echo "GitHub CLI was installed..." 
-            echo "To get started with GitHub CLI, please run:  gh auth login"
-            echo "Alternatively, populate the GH_TOKEN environment variable with a GitHub API authentication token."
+        # OPTIONS
+        elif [ -n "$2" ] && [ -n "$3" ]; then
+            if [ "$3" = "--gh" ]; then
+                git_tool="gh repo"
+                setup
+
+            else
+                echo "Error: $3 is not a valid option."    
+                print_usage
+                exit 1
+            fi
+        else
+            echo "Error: must include URL to dotfiles Git repo."    
+            print_usage
+            exit 1
         fi
+
+    # COMMAND
+    elif [ "$1" = "apply" ]; then
+        apply
+
+    # COMMAND
+    elif [ "$1" = "stage" ]; then
+        stage
+
+    # COMMAND
+    elif [ "$1" = "repo" ]; then
+        repo
 
     else
         echo "Error: $1 is not a valid command."

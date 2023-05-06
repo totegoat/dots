@@ -7,10 +7,13 @@
 # Place this file in the root of your dotfiles Git repository for the Dots
 # tool to be able to know how to handle your dotfiles.
 #
-# Dots has essentially two overarching management actions: pull and push. 
+# Dots has essentially two overarching management actions: 
+#    A. Apply remote dotfiles configuration locally
+#    B. Stage local changes to local copy of remote dotfiles repo
+#
 # This is the order that this configuration file is processed by Dots:
 #
-#    PULL                              PUSH
+#    Apply                             Stage
 #    ------------------------          ---------------------
 #    0. Packages (if enabled)          N/A
 #    1. Directories (create)           Archives (zip)
@@ -20,7 +23,9 @@
 #
 #-----------------------------------------------------------------------------#
 
-# DIRECTORIES 
+###############
+# DIRECTORIES #
+###############
 #
 # These are required directories that must exist before dotfiles, secrets, and
 # archives are placed into them.
@@ -48,44 +53,63 @@ dotdirs=(
     ".ssh/keys 700"  
 )
 
-# DOTFILES
+############
+# DOTFILES #
+############
 #
 # If you want a directory and its contents tracked, map the directory name
 # rather than each file within the directory. However, if you only want a
 # selection of the files within the directory to be tracked, you can explicitly
 # list them out. 
 #
-# Format: "<repo source> <local destination>"
+# Format: "<repo source file> <local destination link>"
 #
 dotfiles=(
     "bashrc .bashrc"
     "gitconfig .gitconfig"
     "vimrc .vimrc"
-    "vim/colors .vim/colors"  # this will track the directory and files within
+    "vim/colors .vim/colors"  # this will track the directory and files
                               # .vim will already be created from dotdirs above
 )
 
-# SECRETS
+###########
+# SECRETS #
+###########
 #
 #
 # Format: "<repo source> <local destination> <octal permissions>"
 #
 secrets=(
-    "
+    "ssh/config.asc .ssh/config 600"
+    "ssh/keys.zip.asc .ssh/keys/keys.zip"
 )
 
-# ARCHIVES
+############
+# ARCHIVES #
+############
 #
-# Currently, all directory files in the uncompressed local path will be
-# compressed into the archive. When uncompressed, they will be set to the 
-# specified permissions.
+# Archives are destined to be encrypted. They are a means of encrypting the
+# contents of directories. If there's no need to encrypt a directory, then
+# simply define it under DOTFILES.
 #
-# Format: "<archive repo path/name> <uncompressed local path> <octal perms>
+# For each defined archive here, there should be a corresponding entry under
+# DIRECTORIES and SECRETS. The entry under DIRECTORIES to setup where the 
+# archive will be extracted into and SECRETS for encrypting the archive and 
+# telling Dots where it is stored on the dotfiles repo.
+#
+# Currently, all directory files in the uncompressed local path, which should
+# be a directory,  will be compressed into the archive. When uncompressed, 
+# they will be set to the specified permissions.
+#
+# Format: "<local path/name> <uncompressed dest> <files octal perms>
 #
 archives=(
+    "ssh/keys/keys.zip .ssh/keys 600"
 )
 
-# PACKAGES
+############
+# PACKAGES #
+############
 #
 # packages=(
 # )
