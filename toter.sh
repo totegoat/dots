@@ -278,7 +278,9 @@ if [ -z "$1" ]; then
     exit 0
 
 elif [ "$1" != "source" ]; then  # if source is set skip all exec below
+    # COMMAND
     if [ "$1" = "bootstrap" ]; then
+        # OPTIONS
         if [ -n "$2" ]; then
             if [ "$2" = "--sudo" ]; then
                 sudo="sudo"

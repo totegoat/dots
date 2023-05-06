@@ -33,7 +33,7 @@
 #
 # If you want a directory and its contents to be tracked, put them in DOTFILES. 
 #
-# Format: "directory permissions"
+# Format: "<directory path> <octal permissions>"
 #
 dotdirs=(
     # Toter will create both .vim and tmp, but if you want a different perm
@@ -41,7 +41,7 @@ dotdirs=(
     # elements of this array are processed in order.
     ".vim/tmp 755"
 
-    # don't want this tracked, but need it for SSH config
+    # don't want this tracked, but need it for encrypted SSH config
     ".ssh 700"       
 
     # encrypted archive of server keys will unzip here
@@ -50,15 +50,37 @@ dotdirs=(
 
 # DOTFILES
 #
+# If you want a directory and its contents tracked, map the directory name
+# rather than each file within the directory. However, if you only want a
+# selection of the files within the directory to be tracked, you can explicitly
+# list them out. 
+#
+# Format: "<repo source> <local destination>"
+#
 dotfiles=(
+    "bashrc .bashrc"
+    "gitconfig .gitconfig"
+    "vimrc .vimrc"
+    "vim/colors .vim/colors"  # this will track the directory and files within
+                              # .vim will already be created from dotdirs above
 )
 
 # SECRETS
 #
+#
+# Format: "<repo source> <local destination> <octal permissions>"
+#
 secrets=(
+    "
 )
 
 # ARCHIVES
+#
+# Currently, all directory files in the uncompressed local path will be
+# compressed into the archive. When uncompressed, they will be set to the 
+# specified permissions.
+#
+# Format: "<archive repo path/name> <uncompressed local path> <octal perms>
 #
 archives=(
 )
