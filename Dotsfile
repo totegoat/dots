@@ -1,14 +1,14 @@
 #-----------------------------------------------------------------------------#
-# Toterfile 
+# Dotsfile 
 #
-# This file is imported by toter.sh (github.com/totegoat/toter) as a 
-# configuration file of sorts, though it is technically BASH script.
+# This file is imported by Dots (github.com/totegoat/dots) as a 
+# configuration file of sorts, though it is technically a BASH library.
 #
-# Place this file in the root of your dotfiles Git repository for the Toter
+# Place this file in the root of your dotfiles Git repository for the Dots
 # tool to be able to know how to handle your dotfiles.
 #
-# Toter has essentially two overarching management actions: pull and push. 
-# This is order that this configuration file is processed by toter.sh:
+# Dots has essentially two overarching management actions: pull and push. 
+# This is the order that this configuration file is processed by Dots:
 #
 #    PULL                              PUSH
 #    ------------------------          ---------------------
@@ -36,7 +36,7 @@
 # Format: "<directory path> <octal permissions>"
 #
 dotdirs=(
-    # Toter will create both .vim and tmp, but if you want a different perm
+    # Dots will create both .vim and tmp, but if you want a different perm
     # set for the .vim parent dir, then specify it before (".vim 740"), as 
     # elements of this array are processed in order.
     ".vim/tmp 755"

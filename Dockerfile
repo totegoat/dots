@@ -2,17 +2,17 @@ ARG IMAGE=registry.fedoraproject.org/fedora-minimal
 FROM ${IMAGE}
 
 # Pass in symmetric encryption passphrase from build command
-ARG TOTER_PASS
+ARG DOTS_PASS
 
 WORKDIR /root
 
 COPY . /root
 
-# Toter: bootstrap
+# Dots: bootstrap
 ENV TERM=xterm-256color
-RUN ./toter.sh bootstrap
+RUN ./dots bootstrap
 
 # Update passphase file with PASSPHRASE ARG
-RUN echo "${TOTER_PASS}" >> /root/.config/toter/passfile
+RUN echo "${DOTS_PASS}" >> /root/.config/dots/passfile
 
-# Toter: configure dotfiles
+# Dots: install dotfiles

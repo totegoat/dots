@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #-----------------------------------------------------------------------------#
-# toter.sh (github.com/totegoat/toter)
+# dots (github.com/totegoat/dots)
 #
 # This script utilizes Git to easily bootstrap a fresh system with or 
 # replicate dotfiles across multiple hosts or containers.
@@ -11,7 +11,7 @@
 # 
 # - Packages are installed utilizing distro-specific package managers.
 #
-# - Dotfiles can be configured from any Git repo containing a Toterfile. 
+# - Dotfiles can be configured from any Git repo containing a Dotsfile file. 
 #
 # - Supports encrypting/decrypting "secrets" before they are pushed to Git.
 #
@@ -20,24 +20,24 @@
 set -e
 
 # Local configuration directory
-config_dir=$HOME/.config/toter
+config_dir=$HOME/.config/dots
 
 # In-path bin directory
 bin_dir=$HOME/.local/bin  
 
 # Local application directory
-app_dir=$HOME/.local/share/toter
+app_dir=$HOME/.local/share/dots
 
-# Local copy of the toter repo
+# Local copy of the dots repo
 local_copy=$app_dir/repo
 
-# Remote toter git repository 
-git_remote=https://github.com/totegoat/toter
+# Remote dots git repository 
+git_remote=https://github.com/totegoat/dots
 
 # Symmetric encryption passphrase -- used to encrypt/decrypt secrets
 pass_file=$config_dir/passfile
 
-# Toter required packages
+# Dots required packages
 base_packages="git gpg curl"
 
 # Git default binary
@@ -58,14 +58,14 @@ norm=$'\033[0m'
 #
 print_usage() {
     echo
-    echo "Usage: toter.sh COMMAND [OPTIONS]"
+    echo "Usage: dots COMMAND [OPTIONS]"
     echo
     echo "Commands:"
     echo "         bootstrap [--sudo | --gh]"
-    echo "                 - Configures a fresh system for toter dotfiles management."
+    echo "                 - Configures a fresh system for Dots (dotfiles management)."
     echo
     echo "         source"
-    echo "                 - Allows toter.sh to bypass exec, ie. import/sourcing."
+    echo "                 - Allows dots script to bypass exec, ie. import as library."
     echo
     echo "Options:"
     echo "         --sudo (enable sudo, eg. running as non-root)"
@@ -194,7 +194,7 @@ install_base_packages() {
     $pkgmgr_update
 
     # Install packages
-    echo "Installing required packages ${bold}($base_packages)${norm} for Toter..."
+    echo "Installing required packages ${bold}($base_packages)${norm} for dots..."
     # for pkg in "${base_packages[@]}"; do
     #    $pkgmgr_install $pkg
     # done
@@ -224,39 +224,39 @@ passphrase_file() {
 }
 
 #
-# Clone Toter git repository
+# Clone dots git repository
 #
-clone_toter_repo() {
+clone_dots_repo() {
     if [ ! -d $local_copy ]; then
         echo
-        echo "Cloning Toter repo..."
+        echo "Cloning dots repo..."
         mkdir -p $app_dir
         $git_tool clone $git_remote $local_copy
 
     else
         echo
-        echo "$local_copy already exists. Skipping Toter clone..."
+        echo "$local_copy already exists. Skipping dots clone..."
     fi
 }
 
 #
-# Setup a Toter "executable" in path
+# Setup a dots "executable" in path
 #
-setup_toter_exec() {
-    if [ ! -L $bin_dir/toter ]; then
+setup_dots_exec() {
+    if [ ! -L $bin_dir/dots ]; then
         echo
-        echo "Setting up toter executable..."
+        echo "Setting up dots executable..."
         mkdir -p $bin_dir 
-        ln -s $local_copy/toter.sh $bin_dir/toter &> /dev/null
+        ln -s $local_copy/dots $bin_dir/dots &> /dev/null
 
     else
         echo
-        echo `ls -l $bin_dir/toter | rev | cut -d' ' -f1-3 | rev`
+        echo `ls -l $bin_dir/dots | rev | cut -d' ' -f1-3 | rev`
         echo "^^^ already exists. Continuing..."
     fi
 
-    # Make sure bin_dir/toter symlink is in PATH
-    if ! which toter &>/dev/null; then
+    # Make sure bin_dir/dots symlink is in PATH
+    if ! which dots &>/dev/null; then
         echo "    Be sure to add $bin_dir to your PATH. Run the below before"
         echo "    proceeding and add it to your .bashrc:"
         echo
@@ -306,13 +306,13 @@ elif [ "$1" != "source" ]; then  # if source is set skip all exec below
         fi
 
         install_base_packages
-        clone_toter_repo        
+        clone_dots_repo        
         passphrase_file
-        setup_toter_exec
+        setup_dots_exec
 
         # Output details of completion
         echo
-        echo "${bold}Done. ${norm} After add $bin_dir to your path, run \"toter\" without any args for instructions."
+        echo "${bold}Done. ${norm} After add $bin_dir to your path, run \"dots\" without any args for instructions."
         echo "${bold}Be sure to put your encryption passphrase in $pass_file.${norm}"
         if $git_flag; then
             echo
