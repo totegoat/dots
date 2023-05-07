@@ -377,14 +377,14 @@ apply() {
         # perms: ${d_field[1]}
         read -a d_field <<< "$dir"
         if [ ! -d "${d_field[0]}" ]; then
-            echo "Making directory: $dir"
-            mkdir -p ${d_field[0]}
+            echo "Making directory: ${d_field[0]}"
+            mkdir -p $HOME/${d_field[0]}
         else
-            echo "${d_field[0]} already exists."
+            echo "$HOME/${d_field[0]} already exists."
         fi
 
         # Make sure the permissions are correct, even if it already exists
-        chmod ${d_field[1]} ${d_field[0]}
+        chmod ${d_field[1]} $HOME/${d_field[0]}
     done
 
     # Symlink dotfiles
@@ -392,8 +392,8 @@ apply() {
         # src: ${l_fields[0]}
         # dst: ${l_fields[1]}
         read -a l_fields <<< "$link"
-        echo "Linking: ${l_fields[0]}"
-        ln -sfn ${l_fields[0]} ${l_fields[1]}
+        echo "Linking: ${l_fields[1]}"
+        ln -sfn $local_copy/${l_fields[0]} $HOME/${l_fields[1]}
     done
 
     # Decrypt secrets
@@ -403,18 +403,18 @@ apply() {
         # perms: ${s_fields[2]}
         read -a s_fields <<< "$secret"
         echo "Decrypting: ${s_fields[0]}"
-        gpg --batch --yes --passphrase-file $pass_file --output ${s_fields[1]} -a -d ${s_fields[0]}
-        chmod ${s_fields[2]} ${s_fields[1]}
+        gpg --batch --yes --passphrase-file $pass_file --output $HOME/${s_fields[1]} -a -d $local_copy/${s_fields[0]}
+        chmod ${s_fields[2]} $HOME/${s_fields[1]}
     done
 
     # Uncompress archives
     for archive in "${archives[@]}"; do
-        # local path/name: a_fields[0]
-        # uncompress dst:  a_fields[1]
-        # file perms:      a_fields[2]
+        # local path:   a_fields[0]
+        # archive name: a_fields[1]
+        # file perms:   a_fields[2]
         read -a a_fields <<< "$archive"
         echo "Uncompressing: ${a_fields[0]}"
-        cd ${a_fields[1]} && unzip -o ${a_fields[0]} && rm ${a_fields[0]}
+        cd $HOME/${a_fields[0]} && unzip ${a_fields[1]} && rm ${a_fields[1]}
         chmod ${a_fields[2]} *
         cd -
     done
@@ -431,14 +431,13 @@ stage() {
 
     # Compress files in their respective places
     for archive in "${archives[@]}"; do
-        # compress dir:  a_fields[0]
-        # archive name:  a_fields[1]
-        # git repo dest: a_fields[2]
-        # file perms:    a_fields[3]
+        # local path:   a_fields[0]
+        # archive name: a_fields[1]
+        # file perms:   a_fields[2]
         read -a a_fields <<< "$archive"
         echo "Compressing: ${a_fields[0]}"
-        cd ${a_fields[0]} && zip -o ${a_fields[1]} *
-        chmod ${a_fields[3]} ${a_fields[1]}
+        cd $HOME/${a_fields[0]} && zip -o ${a_fields[1]} *
+        chmod ${a_fields[2]} ${a_fields[1]}
         cd -
     done
 
@@ -459,7 +458,7 @@ stage() {
         if [ ! -d $repo_path ]; then
             mkdir -p $repo_path
         fi
-        cp ${s_fields[1]}.asc $local_copy/${s_fields[0]} && rm $archive_name
+        cp ${s_fields[1]}.asc $repo_path && rm $archive_name
         cd -
     done
 }

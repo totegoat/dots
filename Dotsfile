@@ -66,7 +66,7 @@ dotdirs=(
 #
 dotfiles=(
     "bashrc .bashrc"
-    "gitconfig .gitconfig"
+    "gitignore .gitignore"
     "vimrc .vimrc"
     "vim/colors .vim/colors"  # this will track the directory and files
                               # .vim will already be created from dotdirs above
@@ -101,11 +101,13 @@ secrets=(
 # be a directory,  will be compressed into the archive. When uncompressed, 
 # they will be set to the specified permissions.
 #
-# Format: "<local dir to compress> <archive name> <git repo destination> \
-#          <uncompressed octal perms>"
+# Remember, the local dir and archive name here should correspond with the 
+# local destination under SECRETS.
+#
+# Format: "<local dir to compress> <archive name> <uncompressed octal perms>"
 #
 archives=(
-    ".ssh/keys keys.zip ssh/keys 600"
+    ".ssh/keys keys.zip 600"
 )
 
 ############
