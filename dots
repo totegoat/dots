@@ -43,8 +43,11 @@ git_remote=https://github.com/totegoat/dots
 # Symmetric encryption passphrase -- used to encrypt/decrypt secrets
 pass_file=$config_dir/passfile
 
-# Dots required packages
-base_packages="git gpg curl"
+# Packages to be installed with install_packages()
+#
+# These default packages are the base packages required by Dots and will be
+# installed during bootstrap()
+packages="git gpg curl zip unzip"
 
 # Git default binary
 git_tool=git
@@ -122,10 +125,52 @@ discover_distro() {
     elif [ "$(uname -s 2> /dev/null)" = "Darwin" ]; then
         distro=macos
     fi
+}
 
-    echo
-    echo "Distro identified as ${bold}$distro${norm}."
-    echo
+#
+# Setup package managers according to distro
+#
+setup_package_manager() {
+    discover_distro
+
+    if [ "$distro" == "unknown" ]; then
+        echo "${bold}Unknown distro.${norm} See supported distros below. Exiting..."
+        print_usage
+        exit 1
+    else
+        echo
+        echo "Distro identified as ${bold}$distro${norm}."
+        echo
+    fi
+
+    # Select the distro-specific package tool commands
+    elif [ "$distro" == "debian" ]; then
+        pkgmgr_update="$sudo apt update"
+        pkgmgr_install="$sudo apt install -y "
+
+    elif [ "$distro" == "rhel" ]; then
+        # minimal containers use dnf5/microdnf
+        if [ -f /usr/bin/microdnf ]; then 
+            dnf_tool=microdnf
+            pkgmgr_update=""
+        else 
+            dnf_tool=dnf
+            pkgmgr_update="$sudo $dnf_tool update -y"
+        fi
+        pkgmgr_install="$sudo $dnf_tool install -y "
+
+    elif [ "$distro" == "amazon" ]; then
+        pkgmgr_update="$sudo yum update -y"
+        pkgmgr_install="$sudo yum install -y "
+
+    elif [ "$distro" == "slackware" ]; then
+        pkgmgr_update="TBD"
+        pkgmgr_install="TBD"
+
+    elif [ "$distro" == "macos" ]; then
+        pkgmgr_update="brew update"
+        pkgmgr_install="brew install "
+    fi
 }
 
 #
@@ -170,54 +215,17 @@ install_ghcli() {
 }
 
 #
-# Install base packages with distro's package manager
+# Install packages with distro's package manager
 #
-install_base_packages() {
-    discover_distro
-
-    if [ "$distro" == "unknown" ]; then
-        echo "${bold}Unknown distro.${norm} See supported distros below. Exiting..."
-        print_usage
-        exit 1
-
-    # Select the distro-specific package tool commands
-    elif [ "$distro" == "debian" ]; then
-        pkgmgr_update="$sudo apt update"
-        pkgmgr_install="$sudo apt install -y "
-
-    elif [ "$distro" == "rhel" ]; then
-        # minimal containers use dnf5/microdnf
-        if [ -f /usr/bin/microdnf ]; then 
-            dnf_tool=microdnf
-            pkgmgr_update=""
-        else 
-            dnf_tool=dnf
-            pkgmgr_update="$sudo $dnf_tool update -y"
-        fi
-        pkgmgr_install="$sudo $dnf_tool install -y "
-
-    elif [ "$distro" == "amazon" ]; then
-        pkgmgr_update="$sudo yum update -y"
-        pkgmgr_install="$sudo yum install -y "
-
-    elif [ "$distro" == "slackware" ]; then
-        pkgmgr_update="TBD"
-        pkgmgr_install="TBD"
-
-    elif [ "$distro" == "macos" ]; then
-        pkgmgr_update="brew update"
-        pkgmgr_install="brew install "
-    fi
+install_packages() {
+    setup_package_managers
 
     # Update package managers
     $pkgmgr_update
 
     # Install packages
-    echo "Installing required packages ${bold}($base_packages)${norm} for dots..."
-    # for pkg in "${base_packages[@]}"; do
-    #    $pkgmgr_install $pkg
-    # done
-    $pkgmgr_install $base_packages
+    echo "Installing required packages ${bold}($packages)${norm} for dots..."
+    $pkgmgr_install $packages
 
     # If GitHub CLI has been flagged, install it
     if $git_flag; then
@@ -286,6 +294,25 @@ setup_dots_exec() {
     fi
 }
 
+#
+# Make sure dotfiles and Dotsfile are present
+#
+check_dotfiles_repo() {
+    if [ ! -d $dotfiles ]; then
+        echo "${bold}Error:${norm} No dotfiles repo found at $dotfiles -- Make sure to 'setup' one."
+        echo
+        print_usage
+        exit 1
+    fi
+
+    if [ ! -f $dotsfile ]; then
+        echo "${bold}Error:${norm} No Dotsfile found in $dotfiles -- see $local_copy/Dotsfile for more information."
+        echo
+        print_usage
+        exit 1
+    fi
+}
+
 #---------------------#
 #      COMMANDS       #
 #---------------------#
@@ -294,7 +321,7 @@ setup_dots_exec() {
 #
 bootstrap() {
 
-    install_base_packages
+    install_packages
     clone_dots_repo        
     passphrase_file
     setup_dots_exec
@@ -335,12 +362,106 @@ setup() {
 # Apply Dotsfile configuration
 #
 apply() {
+    check_dotfiles_repo
+
+    # Import Dotsfile
+    . $dotsfile
+
+    # Packages
+    #
+    #
+    
+    # Directories
+    for dir in "${dotdirs[@]}"; do
+        # dir:   ${d_field[0]}
+        # perms: ${d_field[1]}
+        read -a d_field <<< "$dir"
+        if [ ! -d "${d_field[0]}" ]; then
+            echo "Making directory: $dir"
+            mkdir -p ${d_field[0]}
+        else
+            echo "${d_field[0]} already exists."
+        fi
+
+        # Make sure the permissions are correct, even if it already exists
+        chmod ${d_field[1]} ${d_field[0]}
+    done
+
+    # Symlink dotfiles
+    for link in "${dotfiles[@]}"; do
+        # src: ${l_fields[0]}
+        # dst: ${l_fields[1]}
+        read -a l_fields <<< "$link"
+        echo "Linking: ${l_fields[0]}"
+        ln -sfn ${l_fields[0]} ${l_fields[1]}
+    done
+
+    # Decrypt secrets
+    for secret in "${secrets[@]}"; do
+        # src:   ${s_fields[0]}
+        # dst:   ${s_fields[1]}
+        # perms: ${s_fields[2]}
+        read -a s_fields <<< "$secret"
+        echo "Decrypting: ${s_fields[0]}"
+        gpg --batch --yes --passphrase-file $pass_file --output ${s_fields[1]} -a -d ${s_fields[0]}
+        chmod ${s_fields[2]} ${s_fields[1]}
+    done
+
+    # Uncompress archives
+    for archive in "${archives[@]}"; do
+        # local path/name: a_fields[0]
+        # uncompress dst:  a_fields[1]
+        # file perms:      a_fields[2]
+        read -a a_fields <<< "$archive"
+        echo "Uncompressing: ${a_fields[0]}"
+        cd ${a_fields[1]} && unzip -o ${a_fields[0]} && rm ${a_fields[0]}
+        chmod ${a_fields[2]} *
+        cd -
+    done
 }
 
 #
 # Stage files in preparation for dotfiles repo push
 #
 stage() {
+    check_dotfiles_repo
+
+    # Import Dotsfile
+    . $dotsfile
+
+    # Compress files in their respective places
+    for archive in "${archives[@]}"; do
+        # compress dir:  a_fields[0]
+        # archive name:  a_fields[1]
+        # git repo dest: a_fields[2]
+        # file perms:    a_fields[3]
+        read -a a_fields <<< "$archive"
+        echo "Compressing: ${a_fields[0]}"
+        cd ${a_fields[0]} && zip -o ${a_fields[1]} *
+        chmod ${a_fields[3]} ${a_fields[1]}
+        cd -
+    done
+
+    # Encrypt archives and files, and copy to local git repo 
+    for secret in "${secrets[@]}"; do
+        # src:   ${s_fields[0]}
+        # dst:   ${s_fields[1]}
+        # perms: ${s_fields[2]}
+        archive_path=$HOME/$(echo "${s_fields[1]}" | cut -d'/' -f1-2)
+        archive_name=$(echo "${s_fields[1]}" | rev | cut -d'/' -f1 | rev)
+        repo_path=$local_copy/$(echo "${s_fields[0]}" | cut -d'/' -f1)
+
+        read -a s_fields <<< "$secret"
+        echo "Encrypting: ${s_fields[1]}"
+        cd $archive_path
+        gpg -a --symmetric --cipher-algo AES256 --batch --yes --passphrase-file $pass_file ${s_fields[1]}
+        
+        if [ ! -d $repo_path ]; then
+            mkdir -p $repo_path
+        fi
+        cp ${s_fields[1]}.asc $local_copy/${s_fields[0]} && rm $archive_name
+        cd -
+    done
 }
 
 #
