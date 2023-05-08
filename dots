@@ -144,7 +144,7 @@ setup_package_manager() {
     fi
 
     # Select the distro-specific package tool commands
-    elif [ "$distro" == "debian" ]; then
+    if [ "$distro" == "debian" ]; then
         pkgmgr_update="$sudo apt update"
         pkgmgr_install="$sudo apt install -y "
 
@@ -218,9 +218,9 @@ install_ghcli() {
 # Install packages with distro's package manager
 #
 install_packages() {
-    setup_package_managers
+    setup_package_manager
 
-    # Update package managers
+    # Update package manager
     $pkgmgr_update
 
     # Install packages
