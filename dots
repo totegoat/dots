@@ -29,16 +29,19 @@ bin_dir=$HOME/.local/bin
 app_dir=$HOME/.local/share/dots
 
 # Local copy of the dots repo
-local_copy=$app_dir/dots-repo
+local_dots=$app_dir/dots-repo
+
+# Remote dots git repository 
+remote_dots=https://github.com/totegoat/dots
+
+# Default value will use totegoat/dotsfile sample
+dotfiles_url=https://github.com/totegoat/dotsfiles
 
 # Local copy of dotfiles repo
 dotfiles=$app_dir/dotfiles
 
 # Dotsfile in dotfiles repo
 dotsfile=$dotfiles/Dotsfile
-
-# Remote dots git repository 
-git_remote=https://github.com/totegoat/dots
 
 # Symmetric encryption passphrase -- used to encrypt/decrypt secrets
 pass_file=$config_dir/passfile
@@ -254,15 +257,15 @@ passphrase_file() {
 # Clone dots git repository
 #
 clone_dots_repo() {
-    if [ ! -d $local_copy ]; then
+    if [ ! -d $local_dots ]; then
         echo
         echo "Cloning dots repo..."
         mkdir -p $app_dir
-        $git_tool clone $git_remote $local_copy
+        $git_tool clone $remote_dots $local_dots
 
     else
         echo
-        echo "$local_copy already exists. Skipping dots clone..."
+        echo "$local_dots already exists. Skipping dots clone..."
     fi
 }
 
@@ -274,7 +277,7 @@ setup_dots_exec() {
         echo
         echo "Setting up dots executable..."
         mkdir -p $bin_dir 
-        ln -s $local_copy/dots $bin_dir/dots &> /dev/null
+        ln -s $local_dots/dots $bin_dir/dots &> /dev/null
 
     else
         echo
@@ -306,7 +309,7 @@ check_dotfiles_repo() {
     fi
 
     if [ ! -f $dotsfile ]; then
-        echo "${bold}Error:${norm} No Dotsfile found in $dotfiles -- see $local_copy/Dotsfile for more information."
+        echo "${bold}Error:${norm} No Dotsfile found in $dotfiles -- see $local_dots/Dotsfile for more information."
         echo
         print_usage
         exit 1
@@ -345,7 +348,7 @@ setup() {
     if [ ! -d $dotfiles ]; then
         echo
         echo "Cloning your dotfiles repo..."
-        $git_tool clone $2 $dotfiles
+        $git_tool clone $dotfiles_url $dotfiles
 
         if [ ! -f $dotsfile ]; then
             echo
@@ -393,7 +396,7 @@ apply() {
         # dst: ${l_fields[1]}
         read -a l_fields <<< "$link"
         echo "Linking: ${l_fields[1]}"
-        ln -sfn $local_copy/${l_fields[0]} $HOME/${l_fields[1]}
+        ln -sfn $local_dots/${l_fields[0]} $HOME/${l_fields[1]}
     done
 
     # Decrypt secrets
@@ -403,7 +406,7 @@ apply() {
         # perms: ${s_fields[2]}
         read -a s_fields <<< "$secret"
         echo "Decrypting: ${s_fields[0]}"
-        gpg --batch --yes --passphrase-file $pass_file --output $HOME/${s_fields[1]} -a -d $local_copy/${s_fields[0]}
+        gpg --batch --yes --passphrase-file $pass_file --output $HOME/${s_fields[1]} -a -d $local_dots/${s_fields[0]}
         chmod ${s_fields[2]} $HOME/${s_fields[1]}
     done
 
@@ -448,7 +451,7 @@ stage() {
         # perms: ${s_fields[2]}
         archive_path=$HOME/$(echo "${s_fields[1]}" | cut -d'/' -f1-2)
         archive_name=$(echo "${s_fields[1]}" | rev | cut -d'/' -f1 | rev)
-        repo_path=$local_copy/$(echo "${s_fields[0]}" | cut -d'/' -f1)
+        repo_path=$local_dots/$(echo "${s_fields[0]}" | cut -d'/' -f1)
 
         read -a s_fields <<< "$secret"
         echo "Encrypting: ${s_fields[1]}"
@@ -522,12 +525,26 @@ elif [ "$1" != "source" ]; then  # if source is set skip all exec below
 
     # COMMAND
     elif [ "$1" = "setup" ]; then
+        if [ -z "$2" ]; then
+            echo "Error: must include URL to dotfiles Git repo."
+            print_usage
+            exit 1
+        fi
+
         if [ -n "$2" ] && [ -z "$3" ]; then
+            dotfiles_url=$2
             setup
 
         # OPTIONS
         elif [ -n "$2" ] && [ -n "$3" ]; then
             if [ "$3" = "--gh" ]; then
+                if ! which gh &>/dev/null; then
+                    echo "Error: GitHub CLI not installed."
+                    echo 
+                    echo "You can install GitHub CLI with 'dots bootstrap --gh'."
+                    print_usage
+                    exit 1
+                fi
                 git_tool="gh repo"
                 setup
 
@@ -536,10 +553,6 @@ elif [ "$1" != "source" ]; then  # if source is set skip all exec below
                 print_usage
                 exit 1
             fi
-        else
-            echo "Error: must include URL to dotfiles Git repo."    
-            print_usage
-            exit 1
         fi
 
     # COMMAND

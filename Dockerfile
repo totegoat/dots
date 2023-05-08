@@ -18,4 +18,5 @@ RUN echo "PATH=\"~/.local/bin:\$PATH\"" >> ~/.bashrc
 # Dots: Update passphrase file with PASSPHRASE ARG, if passed in
 RUN echo "${DOTS_PASS}" >> /root/.config/dots/passfile
 
-# Dots: install dotfiles
+# Dots: setup dotfiles and install Dotsfile configuration
+RUN dots setup ${DOTFILES_URL}
