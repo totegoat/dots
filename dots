@@ -38,10 +38,10 @@ remote_dots=https://github.com/totegoat/dots
 dotfiles_url=https://github.com/totegoat/dotsfiles
 
 # Local copy of dotfiles repo
-dotfiles=$app_dir/dotfiles
+dotfiles_dir=$app_dir/dotfiles
 
 # Dotsfile in dotfiles repo
-dotsfile=$dotfiles/Dotsfile
+dotsfile=$dotfiles_dir/Dotsfile
 
 # Symmetric encryption passphrase -- used to encrypt/decrypt secrets
 pass_file=$config_dir/passfile
@@ -301,15 +301,15 @@ setup_dots_exec() {
 # Make sure dotfiles and Dotsfile are present
 #
 check_dotfiles_repo() {
-    if [ ! -d $dotfiles ]; then
-        echo "${bold}Error:${norm} No dotfiles repo found at $dotfiles -- Make sure to 'setup' one."
+    if [ ! -d $dotfiles_dir ]; then
+        echo "${bold}Error:${norm} No dotfiles repo found at $dotfiles_dir -- Make sure to 'setup' one."
         echo
         print_usage
         exit 1
     fi
 
     if [ ! -f $dotsfile ]; then
-        echo "${bold}Error:${norm} No Dotsfile found in $dotfiles -- see $local_dots/Dotsfile for more information."
+        echo "${bold}Error:${norm} No Dotsfile found in $dotfiles_dir -- see $local_dots/Dotsfile for more information."
         echo
         print_usage
         exit 1
@@ -345,20 +345,20 @@ bootstrap() {
 # Setup dotfiles Git repo
 #
 setup() {
-    if [ ! -d $dotfiles ]; then
+    if [ ! -d $dotfiles_dir ]; then
         echo
         echo "Cloning your dotfiles repo..."
-        $git_tool clone $dotfiles_url $dotfiles
+        $git_tool clone $dotfiles_url $dotfiles_dir
 
         if [ ! -f $dotsfile ]; then
             echo
-            echo "${bold}Warning: ${norm}No $dotsfile found in $dotfiles"
+            echo "${bold}Warning: ${norm}No $dotsfile found in $dotfiles_dir"
         fi
     else
         echo
-        echo "$dotfiles already exists. Skipping clone..."
+        echo "$dotfiles_dir already exists. Skipping clone..."
     fi
-    # echo "$git_tool clone $2 $dotfiles"
+    # echo "$git_tool clone $2 $dotfiles_dir"
 }
 
 #
@@ -392,11 +392,19 @@ apply() {
 
     # Symlink dotfiles
     for link in "${dotfiles[@]}"; do
-        # src: ${l_fields[0]}
-        # dst: ${l_fields[1]}
+        # target: ${l_fields[0]}
+        # link:   ${l_fields[1]}
         read -a l_fields <<< "$link"
-        echo "Linking: ${l_fields[1]}"
-        ln -sfn $local_dots/${l_fields[0]} $HOME/${l_fields[1]}
+        if ! ls $dotfiles_dir/${l_fields[0]} &>/dev/null; then
+            echo "Linking: $dotfiles_dir/${l_fields[0]} doesn't exist. Skipping..."
+        else
+            echo "Linking: $dotfiles_dir/${l_fields[0]} -> $HOME/${l_fields[1]}"
+            if ls $HOME/${l_fields[1]} &>/dev/null && 
+               [ ! -L $HOME/${l_fields[1]} ]; then
+                mv $HOME/${l_fields[1]} $HOME/${l_fields[1]}_dots.orig
+            fi
+            ln -sfn $dotfiles_dir/${l_fields[0]} $HOME/${l_fields[1]}
+        fi
     done
 
     # Decrypt secrets
@@ -405,9 +413,13 @@ apply() {
         # dst:   ${s_fields[1]}
         # perms: ${s_fields[2]}
         read -a s_fields <<< "$secret"
-        echo "Decrypting: ${s_fields[0]}"
-        gpg --batch --yes --passphrase-file $pass_file --output $HOME/${s_fields[1]} -a -d $local_dots/${s_fields[0]}
-        chmod ${s_fields[2]} $HOME/${s_fields[1]}
+        if ! ls $dotfiles_dir/${s_fields[0]} &>/dev/null; then
+            echo "Decrypting: $dotfiles_dir/${s_fields[0]} doesn't exist. Skipping..."
+        else
+            echo "Decrypting: ${s_fields[0]}"
+            gpg --batch --yes --passphrase-file $pass_file --output $HOME/${s_fields[1]} -a -d $local_dots/${s_fields[0]}
+            chmod ${s_fields[2]} $HOME/${s_fields[1]}
+        fi
     done
 
     # Uncompress archives
@@ -416,10 +428,14 @@ apply() {
         # archive name: a_fields[1]
         # file perms:   a_fields[2]
         read -a a_fields <<< "$archive"
-        echo "Uncompressing: ${a_fields[0]}"
-        cd $HOME/${a_fields[0]} && unzip ${a_fields[1]} && rm ${a_fields[1]}
-        chmod ${a_fields[2]} *
-        cd -
+        if ! ls $dotfiles_dir/${a_fields[0]} &>/dev/null; then
+            echo "Uncompressing: $dotfiles_dir/${a_fields[0]} doesn't exist. Skipping..."
+        else
+            echo "Uncompressing: ${a_fields[0]}"
+            cd $HOME/${a_fields[0]} && unzip ${a_fields[1]} && rm ${a_fields[1]}
+            chmod ${a_fields[2]} *
+            cd -
+        fi
     done
 }
 
@@ -470,16 +486,18 @@ stage() {
 # Quickly cd into the dotfiles repo/directory
 #
 repo() {
-    if [ ! -d $dotsfiles ]; then
-        echo "Error: $dotsfiles doesn't exist -- must 'setup' dotfiles repo first."
+    if [ ! -d $dotfiles_dir ]; then
+        echo "Error: $dotfiles_dir doesn't exist -- must 'setup' dotfiles repo first."
+        print_usage
         exit 1
     else
-        cd $dotsfiles
+        echo 
+        echo "Your dotfiles git repo (local copy) is here:"
         echo
-        echo "Use any git commands in here to pull most recent configuration or push"
-        echo "staged files to remote dotfiles repo."
+        echo "${bold}$dotfiles_dir${norm}"
         echo
-        echo "${bold}cd -${norm} will take you back."
+        echo "cd into the above directory and use git commands, such as status, add/commit, push staged files to remote dotfiles repo or pull changes from the remote repo before running 'dots apply'."
+        echo
     fi
 }
 

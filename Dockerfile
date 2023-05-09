@@ -1,7 +1,8 @@
 ARG IMAGE=registry.fedoraproject.org/fedora-minimal
 FROM ${IMAGE}
 
-# Pass in symmetric encryption passphrase from build command
+# Pass in build command arguments
+ARG DOTFILES_URL
 ARG DOTS_PASS
 
 WORKDIR /root
@@ -19,4 +20,4 @@ RUN echo "PATH=\"~/.local/bin:\$PATH\"" >> ~/.bashrc
 RUN echo "${DOTS_PASS}" >> /root/.config/dots/passfile
 
 # Dots: setup dotfiles and install Dotsfile configuration
-RUN dots setup ${DOTFILES_URL}
+RUN ./dots setup ${DOTFILES_URL}
