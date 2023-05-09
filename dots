@@ -380,14 +380,14 @@ apply() {
         # perms: ${d_field[1]}
         read -a d_field <<< "$dir"
         if [ ! -d "${d_field[0]}" ]; then
-            echo "Making directory: ${d_field[0]}"
+            echo "[Directory] Making directory: ${d_field[0]}"
             mkdir -p $HOME/${d_field[0]}
         else
-            echo "$HOME/${d_field[0]} already exists."
+            echo "[Directory] $HOME/${d_field[0]} already exists."
         fi
 
         # Make sure the permissions are correct, even if it already exists
-        chmod ${d_field[1]} $HOME/${d_field[0]}
+        chmod ${d_field[1]} $HOME/${d_field[0]} &>/dev/null
     done
 
     # Symlink dotfiles
@@ -396,9 +396,9 @@ apply() {
         # link:   ${l_fields[1]}
         read -a l_fields <<< "$link"
         if ! ls $dotfiles_dir/${l_fields[0]} &>/dev/null; then
-            echo "Linking: $dotfiles_dir/${l_fields[0]} doesn't exist. Skipping..."
+            echo "[Dotfile] $dotfiles_dir/${l_fields[0]} doesn't exist. Skipping..."
         else
-            echo "Linking: $dotfiles_dir/${l_fields[0]} -> $HOME/${l_fields[1]}"
+            echo "[Dotfile] $dotfiles_dir/${l_fields[0]} -> $HOME/${l_fields[1]}"
             if ls $HOME/${l_fields[1]} &>/dev/null && 
                [ ! -L $HOME/${l_fields[1]} ]; then
                 mv $HOME/${l_fields[1]} $HOME/${l_fields[1]}_dots.orig
@@ -414,9 +414,9 @@ apply() {
         # perms: ${s_fields[2]}
         read -a s_fields <<< "$secret"
         if ! ls $dotfiles_dir/${s_fields[0]} &>/dev/null; then
-            echo "Decrypting: $dotfiles_dir/${s_fields[0]} doesn't exist. Skipping..."
+            echo "[Secret] Decrypt: $dotfiles_dir/${s_fields[0]} doesn't exist. Skipping..."
         else
-            echo "Decrypting: ${s_fields[0]}"
+            echo "[Secret] Decrypt: ${s_fields[0]}"
             gpg --batch --yes --passphrase-file $pass_file --output $HOME/${s_fields[1]} -a -d $local_dots/${s_fields[0]}
             chmod ${s_fields[2]} $HOME/${s_fields[1]}
         fi
@@ -429,9 +429,9 @@ apply() {
         # file perms:   a_fields[2]
         read -a a_fields <<< "$archive"
         if ! ls $dotfiles_dir/${a_fields[0]} &>/dev/null; then
-            echo "Uncompressing: $dotfiles_dir/${a_fields[0]} doesn't exist. Skipping..."
+            echo "[Archive] Uncompress: $dotfiles_dir/${a_fields[0]} doesn't exist. Skipping..."
         else
-            echo "Uncompressing: ${a_fields[0]}"
+            echo "[Archive] Uncompress: ${a_fields[0]}"
             cd $HOME/${a_fields[0]} && unzip ${a_fields[1]} && rm ${a_fields[1]}
             chmod ${a_fields[2]} *
             cd -
@@ -454,10 +454,14 @@ stage() {
         # archive name: a_fields[1]
         # file perms:   a_fields[2]
         read -a a_fields <<< "$archive"
-        echo "Compressing: ${a_fields[0]}"
-        cd $HOME/${a_fields[0]} && zip -o ${a_fields[1]} *
-        chmod ${a_fields[2]} ${a_fields[1]}
-        cd -
+        if ! ls $HOME/${a_fields[0]} &>/dev/null; then
+            echo "[Archive] Compress: $HOME/${a_fields[0]} doesn't exist. Skipping..."
+        else
+            echo "[Archive] Compress: ${a_fields[0]}"
+            cd $HOME/${a_fields[0]} && zip -o ${a_fields[1]} *
+            chmod ${a_fields[2]} ${a_fields[1]}
+            cd -
+        fi
     done
 
     # Encrypt archives and files, and copy to local git repo 
@@ -470,15 +474,19 @@ stage() {
         repo_path=$local_dots/$(echo "${s_fields[0]}" | cut -d'/' -f1)
 
         read -a s_fields <<< "$secret"
-        echo "Encrypting: ${s_fields[1]}"
-        cd $archive_path
-        gpg -a --symmetric --cipher-algo AES256 --batch --yes --passphrase-file $pass_file ${s_fields[1]}
+        if ! ls $HOME/${s_fields[1]} &>/dev/null; then
+            echo "[Secret] Encrypt: $HOME/${s_fields[1]} doesn't exist. Skipping..."
+        else
+            echo "[Secret] Encrypt: ${s_fields[1]}"
+            cd $archive_path
+            gpg -a --symmetric --cipher-algo AES256 --batch --yes --passphrase-file $pass_file ${s_fields[1]}
         
-        if [ ! -d $repo_path ]; then
-            mkdir -p $repo_path
+            if [ ! -d $repo_path ]; then
+                mkdir -p $repo_path
+            fi
+            cp ${s_fields[1]}.asc $repo_path && rm $archive_name
+            cd -
         fi
-        cp ${s_fields[1]}.asc $repo_path && rm $archive_name
-        cd -
     done
 }
 
