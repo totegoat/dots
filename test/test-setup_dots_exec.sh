@@ -20,7 +20,7 @@ fi
 
 # Make sure bin_dir is in PATH
 echo -n "$bin_dir is in PATH ..... "
-if which dots &>/dev/null; then
+if echo $PATH | grep -q "$bin_dir" &>/dev/null; then
     echo "true"
     succeeded=$((succeeded + 1))
 else

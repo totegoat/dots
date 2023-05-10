@@ -86,8 +86,8 @@ print_usage() {
     echo "         stage"
     echo "                 - Stages your archives and secrets for git push to remote."
     echo
-    echo "         repo"
-    echo "                 - Puts you in your dotfiles dir for Git pull/push commands."
+    echo "         status"
+    echo "                 - Prints the git status of your dotfiles."
     echo
     echo "         source"
     echo "                 - Allows dots script to bypass exec, ie. import as library."
@@ -286,7 +286,7 @@ setup_dots_exec() {
     fi
 
     # Make sure bin_dir/dots symlink is in PATH
-    if ! which dots &>/dev/null; then
+    if ! echo $PATH | grep -q "$bin_dir" &>/dev/null; then
         echo "    Be sure to add $bin_dir to your PATH. Run the below before"
         echo "    proceeding and add it to your .bashrc:"
         echo
@@ -380,10 +380,10 @@ apply() {
         # perms: ${d_field[1]}
         read -a d_field <<< "$dir"
         if [ ! -d "${d_field[0]}" ]; then
-            echo "[Directory] Making directory: ${d_field[0]}"
+            echo "${bold}[Directory]${norm} Making directory: ${d_field[0]}"
             mkdir -p $HOME/${d_field[0]}
         else
-            echo "[Directory] $HOME/${d_field[0]} already exists."
+            echo "${bold}[Directory]${norm} $HOME/${d_field[0]} already exists."
         fi
 
         # Make sure the permissions are correct, even if it already exists
@@ -396,9 +396,9 @@ apply() {
         # link:   ${l_fields[1]}
         read -a l_fields <<< "$link"
         if ! ls $dotfiles_dir/${l_fields[0]} &>/dev/null; then
-            echo "[Dotfile] $dotfiles_dir/${l_fields[0]} doesn't exist. Skipping..."
+            echo "${bold}[Dotfile]${norm} $dotfiles_dir/${l_fields[0]} doesn't exist. Skipping..."
         else
-            echo "[Dotfile] $dotfiles_dir/${l_fields[0]} -> $HOME/${l_fields[1]}"
+            echo "${bold}[Dotfile]${norm} $dotfiles_dir/${l_fields[0]} -> $HOME/${l_fields[1]}"
             if ls $HOME/${l_fields[1]} &>/dev/null && 
                [ ! -L $HOME/${l_fields[1]} ]; then
                 mv $HOME/${l_fields[1]} $HOME/${l_fields[1]}_dots.orig
@@ -414,24 +414,25 @@ apply() {
         # perms: ${s_fields[2]}
         read -a s_fields <<< "$secret"
         if ! ls $dotfiles_dir/${s_fields[0]} &>/dev/null; then
-            echo "[Secret] Decrypt: $dotfiles_dir/${s_fields[0]} doesn't exist. Skipping..."
+            echo "${bold}[Secret]${norm} Decrypt: $dotfiles_dir/${s_fields[0]} doesn't exist. Skipping..."
         else
-            echo "[Secret] Decrypt: ${s_fields[0]}"
-            gpg --batch --yes --passphrase-file $pass_file --output $HOME/${s_fields[1]} -a -d $local_dots/${s_fields[0]}
+            echo "${bold}[Secret]${norm} Decrypt: ${s_fields[0]}"
+            gpg --batch --yes --passphrase-file $pass_file --output $HOME/${s_fields[1]} -a -d $dotfiles_dir/${s_fields[0]} &>/dev/null
             chmod ${s_fields[2]} $HOME/${s_fields[1]}
         fi
     done
 
-    # Uncompress archives
+    # Decompress archives
     for archive in "${archives[@]}"; do
         # local path:   a_fields[0]
         # archive name: a_fields[1]
         # file perms:   a_fields[2]
         read -a a_fields <<< "$archive"
-        if ! ls $dotfiles_dir/${a_fields[0]} &>/dev/null; then
-            echo "[Archive] Uncompress: $dotfiles_dir/${a_fields[0]} doesn't exist. Skipping..."
+        afile=$HOME/${a_fields[0]}/${a_fields[1]}
+        if ! ls $afile &>/dev/null; then
+            echo "${bold}[Archive]${norm} Decompress: $afile doesn't exist. Skipping..."
         else
-            echo "[Archive] Uncompress: ${a_fields[0]}"
+            echo "${bold}[Archive]${norm} Decompress: ${a_fields[0]}"
             cd $HOME/${a_fields[0]} && unzip ${a_fields[1]} && rm ${a_fields[1]}
             chmod ${a_fields[2]} *
             cd -
@@ -448,6 +449,10 @@ stage() {
     # Import Dotsfile
     . $dotsfile
 
+    # Clean-up local archives and encrypted files after they've been copied
+    # to the dotfiles git repo
+    clean_up=()
+
     # Compress files in their respective places
     for archive in "${archives[@]}"; do
         # local path:   a_fields[0]
@@ -455,12 +460,15 @@ stage() {
         # file perms:   a_fields[2]
         read -a a_fields <<< "$archive"
         if ! ls $HOME/${a_fields[0]} &>/dev/null; then
-            echo "[Archive] Compress: $HOME/${a_fields[0]} doesn't exist. Skipping..."
+            echo "${bold}[Archive]${norm} Compress: $HOME/${a_fields[0]} doesn't exist. Skipping..."
+        elif ! ls $HOME/${a_fields[0]}/* &>/dev/null; then
+            echo "${bold}[Archive]${norm} Compress: No files in $HOME/${a_fields[0]} to compress. Skipping..."
         else
-            echo "[Archive] Compress: ${a_fields[0]}"
-            cd $HOME/${a_fields[0]} && zip -o ${a_fields[1]} *
+            echo "${bold}[Archive]${norm} Compress: ${a_fields[0]}/*"
+            cd $HOME/${a_fields[0]} && zip -q -o ${a_fields[1]} *
             chmod ${a_fields[2]} ${a_fields[1]}
-            cd -
+            clean_up+=("$HOME/${a_fields[0]}/${a_fields[1]}")
+            cd - &>/dev/null
         fi
     done
 
@@ -469,31 +477,38 @@ stage() {
         # src:   ${s_fields[0]}
         # dst:   ${s_fields[1]}
         # perms: ${s_fields[2]}
-        archive_path=$HOME/$(echo "${s_fields[1]}" | cut -d'/' -f1-2)
-        archive_name=$(echo "${s_fields[1]}" | rev | cut -d'/' -f1 | rev)
-        repo_path=$local_dots/$(echo "${s_fields[0]}" | cut -d'/' -f1)
-
         read -a s_fields <<< "$secret"
+        secret_path=$HOME/$(echo "${s_fields[1]}" | rev | cut -d'/' -f2- | rev)
+        secret_name=$(echo "${s_fields[1]}" | rev | cut -d'/' -f1 | rev)
+        repo_path=$dotfiles_dir/$(echo "${s_fields[0]}" | cut -d'/' -f1)
+
         if ! ls $HOME/${s_fields[1]} &>/dev/null; then
-            echo "[Secret] Encrypt: $HOME/${s_fields[1]} doesn't exist. Skipping..."
+            echo "${bold}[Secret]${norm} Encrypt: $HOME/${s_fields[1]} doesn't exist. Skipping..."
         else
-            echo "[Secret] Encrypt: ${s_fields[1]}"
-            cd $archive_path
-            gpg -a --symmetric --cipher-algo AES256 --batch --yes --passphrase-file $pass_file ${s_fields[1]}
+            echo "${bold}[Secret]${norm} Encrypt: ${s_fields[1]}"
+            cd $secret_path
+            gpg -a --symmetric --cipher-algo AES256 --batch --yes --passphrase-file $pass_file $HOME/${s_fields[1]}
+            cd - &>/dev/null
         
             if [ ! -d $repo_path ]; then
+                echo "${bold}[Secret]${norm} Encrypt: making directory $repo_path..."
                 mkdir -p $repo_path
             fi
-            cp ${s_fields[1]}.asc $repo_path && rm $archive_name
-            cd -
+            cp $HOME/${s_fields[1]}.asc $repo_path && clean_up+=("$HOME/${s_fields[1]}.asc")
         fi
+    done
+
+    # Clean-up temp files
+    echo "${bold}[Secret]${norm} Clean-up: deleting temporary files..."
+    for tmp_file in "${clean_up[@]}"; do
+        rm $tmp_file
     done
 }
 
 #
-# Quickly cd into the dotfiles repo/directory
+# Git status of the dotfiles repo/directory
 #
-repo() {
+status() {
     if [ ! -d $dotfiles_dir ]; then
         echo "Error: $dotfiles_dir doesn't exist -- must 'setup' dotfiles repo first."
         print_usage
@@ -502,10 +517,16 @@ repo() {
         echo 
         echo "Your dotfiles git repo (local copy) is here:"
         echo
-        echo "${bold}$dotfiles_dir${norm}"
+        echo "     ${bold}$dotfiles_dir${norm}"
         echo
-        echo "cd into the above directory and use git commands, such as status, add/commit, push staged files to remote dotfiles repo or pull changes from the remote repo before running 'dots apply'."
-        echo
+        echo "     CD into the above directory and use git commands, such as status," 
+        echo "     add/commit, and push to staged files to remote dotfiles repo or pull" 
+        echo "     changes from the remote repo before running 'dots apply'."
+        echo 
+        echo "+-------------+"
+        echo "| git status: | $dotfiles_dir "
+        echo "+-------------+"
+        cd $dotfiles_dir &>/dev/null && git status
     fi
 }
 
@@ -590,8 +611,8 @@ elif [ "$1" != "source" ]; then  # if source is set skip all exec below
         stage
 
     # COMMAND
-    elif [ "$1" = "repo" ]; then
-        repo
+    elif [ "$1" = "status" ]; then
+        status
 
     else
         echo "Error: $1 is not a valid command."
