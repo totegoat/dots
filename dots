@@ -56,6 +56,9 @@ packages="git gpg curl zip unzip"
 git_tool=git
 git_flag=false
 
+# Default method for show()
+show_method=apply
+
 # Do not run privileged commands with sudo by default
 sudo=""
 
@@ -85,7 +88,11 @@ print_usage() {
     echo
     echo "         stage"
     echo "                 - Stages your archives and secrets for git push to remote."
-    echo
+    #echo
+    #echo "         show [apply | stage]"
+    #echo "                 - Display the outcome of the current Dotsfile configuration"
+    #echo "                   for either command - defaults to 'apply' (ie. dryrun)."
+    echo 
     echo "         status"
     echo "                 - Prints the git status of your dotfiles."
     echo
@@ -506,6 +513,23 @@ stage() {
 }
 
 #
+# Dry-run Dotsfile configuration and print outcome
+#
+# show(){
+#    check_dotfiles_repo
+
+    # Import Dotsfile
+#    . $dotsfile
+
+#    echo "${bold}[Show]${norm} $show_method"
+
+#    show_dir=$app_dir/tmp-show
+#    if [ ! -d $show_dir ]; then
+#        mkdir -p $show_dir
+#    fi
+# }
+
+#
 # Git status of the dotfiles repo/directory
 #
 status() {
@@ -609,6 +633,25 @@ elif [ "$1" != "source" ]; then  # if source is set skip all exec below
     # COMMAND
     elif [ "$1" = "stage" ]; then
         stage
+
+    # COMMAND
+    # elif [ "$1" = "show" ]; then
+        # OPTIONS
+    #    if [ -n "$2" ]; then
+    #        if [ "$2" = "apply" ]; then
+                # show_method=apply set as default 
+    #            show
+    #        elif [ "$2" = "stage" ]; then
+    #            show_method=$2
+    #            show
+    #        else
+    #            echo "Error: $2 is not a valid option."    
+    #            print_usage
+    #            exit 1
+    #        fi
+    #    else
+    #        show
+    #    fi
 
     # COMMAND
     elif [ "$1" = "status" ]; then

@@ -88,7 +88,7 @@ secrets=(
 # ARCHIVES #
 ############
 #
-# Archives are destined to be encrypted. They are a means of encrypting the
+# Archives will be encrypted. They are an intermediary means of encrypting the
 # contents of directories. If there's no need to encrypt a directory, then
 # simply define it under DOTFILES.
 #
